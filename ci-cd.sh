@@ -33,6 +33,37 @@ if [ -n "$MR_ID" ]; then
     # Sprawdzanie czy merge request został zmergowany
     if echo "$merge_response" | grep -q '"state":"merged"'; then
         echo "Merge request został pomyślnie zmergowany."
+
+        # Pobranie listy tagów i wyciągnięcie ostatniego numeru wersji
+        last_tag=$(curl --silent --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" \
+            "$GITLAB_URL/api/v4/projects/$PROJECT_ID/repository/tags" | grep -o '"name":"v[0-9]*\.[0-9]*\.[0-9]*"' | head -n 1 | sed 's/"name":"//;s/"//')
+
+        # Parsowanie wersji i inkrementacja numeru poprawki (Z w vX.Y.Z)
+        if [[ $last_tag =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            major=${BASH_REMATCH[1]}
+            minor=${BASH_REMATCH[2]}
+            patch=${BASH_REMATCH[3]}
+            new_patch=$((patch + 1))
+            new_tag="v${major}.${minor}.${new_patch}"
+        else
+            # Jeśli brak tagów, zaczynamy od v1.0.0
+            new_tag="v1.0.0"
+        fi
+
+        # Tworzenie nowego taga
+        tag_response=$(curl --silent --request POST --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" \
+            --data "tag_name=$new_tag" \
+            --data "ref=$TARGET_BRANCH" \
+            "$GITLAB_URL/api/v4/projects/$PROJECT_ID/repository/tags")
+
+        # Sprawdzanie odpowiedzi na utworzenie taga
+        if echo "$tag_response" | grep -q '"name":"'"$new_tag"'"'; then
+            echo "Utworzono nowy tag: $new_tag"
+        else
+            echo "Błąd podczas tworzenia taga:"
+            echo "$tag_response"
+        fi
+
     else
         echo "Błąd podczas mergowania merge requesta:"
         echo "$merge_response"
