@@ -1,0 +1,5 @@
+# Zmienna z prefiksem (np. 'v')
+prefix="v"
+
+# Zmienna z pełnym wzorcem, który zawiera prefiks
+pattern="\"name\": \"$prefix[0-9]+\.[0-9]+\.[0-9]+\""
