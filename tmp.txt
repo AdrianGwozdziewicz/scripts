@@ -1,5 +1,17 @@
-# Zmienna z prefiksem (np. 'v')
-prefix="v"
+# Configuration
+GITLAB_URL="https://gitlab.com"
+PROJECT_ID="12345"
+FILE_PATH="scripts/deploy.sh"
+BRANCH="main"
+PRIVATE_TOKEN="glpat-abcdef123456"
+OUTPUT_FILE="deploy.sh"
 
-# Zmienna z pełnym wzorcem, który zawiera prefiks
-pattern="\"name\": \"$prefix[0-9]+\.[0-9]+\.[0-9]+\""
+# Encode the file path
+ENCODED_PATH=$(echo "$FILE_PATH" | sed 's/\//%2F/g')
+
+# Download the file
+curl --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" \
+     "$GITLAB_URL/api/v4/projects/$PROJECT_ID/repository/files/$ENCODED_PATH/raw?ref=$BRANCH" \
+     --output "$OUTPUT_FILE"
+
+echo "File downloaded to $OUTPUT_FILE"
