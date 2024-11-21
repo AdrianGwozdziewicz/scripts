@@ -15,3 +15,18 @@ curl --header "PRIVATE-TOKEN: $PRIVATE_TOKEN" \
      --output "$OUTPUT_FILE"
 
 echo "File downloaded to $OUTPUT_FILE"
+
+
+
+
+build_script:
+  script:
+    - curl -O https://repo-b-url/scripts/build.sh
+    - chmod +x build.sh
+    - ./build.sh
+
+test_script:
+  script:
+    - curl -O https://repo-b-url/scripts/test.sh
+    - chmod +x test.sh
+    - ./test.sh
