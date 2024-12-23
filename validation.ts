@@ -117,7 +117,7 @@ const splitByOperator = (expression, operator) => {
 
 const validateSimpleExpression = (expression) => {
     // A basic regular expression to validate a simple filter expression like `@.price < 10`
-    const simpleFilterPattern = /^([a-zA-Z0-9_.]+)\s*(==|!=|<|>|<=|>=)\s*(.*)$/;
+    const simpleFilterPattern = /^@\.([a-zA-Z0-9_.]+)\s*(==|!=|<|>|<=|>=)\s*(("([^"\\]|\\.)*"|'([^'\\]|\\.)*'|true|false|\d+(\.\d+)?))$/;
     return simpleFilterPattern.test(expression);
 };
 
