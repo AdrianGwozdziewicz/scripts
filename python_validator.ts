@@ -1,14 +1,17 @@
-import Skulpt from 'skulpt';
+import React, { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import AceEditor from 'react-ace';
+import { loadPyodide } from 'pyodide';  // Pyodide for Python 3 validation
 
-export const validatePythonWithSkulpt = (code: string): boolean => {
+// Python 3 validation function using Pyodide
+export const validatePythonWithPyodide = async (code: string): Promise<boolean> => {
   try {
-    // Try to run the code using Skulpt
-    Skulpt.misceval.asyncToPromise(() => {
-      return Skulpt.run(code); // Executes the code
-    });
-    return true; // No errors, code is valid
+    // Load Pyodide and execute the code
+    const pyodide = await loadPyodide();
+    await pyodide.runPythonAsync(code);
+    return true; // Python code is valid
   } catch (error) {
-    console.error('Python Syntax Error:', error);
-    return false; // Syntax error
+    console.error('Python 3 Syntax Error:', error);
+    return false; // Syntax error detected
   }
 };
