@@ -1,90 +1,148 @@
-import React, { useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import AceEditor from 'react-ace';
-import { loadPyodide } from 'pyodide';  // Pyodide for Python 3 validation
+// src/utils/pythonValidator.ts
 
-// Python 3 validation function using Pyodide
-export const validatePythonWithPyodide = async (code: string): Promise<boolean> => {
+// Definicja interfejsu Pyodide
+export interface PyodideInterface {
+  runPython: (code: string) => any;
+}
+
+// Typ zwracany przez funkcję walidatora: albo true, albo komunikat błędu.
+export type ValidatorResult = true | string;
+
+/**
+ * Asynchroniczna funkcja walidatora kodu Python.
+ * @param code - kod Pythona do walidacji.
+ * @param pyodide - instancja Pyodide (powinna być już załadowana).
+ * @returns Promise, które rozwiązuje się true, gdy kod jest poprawny lub komunikatem błędu.
+ */
+export const validatePythonCode = async (
+  code: string,
+  pyodide: PyodideInterface | null
+): Promise<ValidatorResult> => {
+  if (!pyodide) {
+    return "Pyodide nie jest jeszcze załadowany.";
+  }
   try {
-    // Load Pyodide and execute the code
-    const pyodide = await loadPyodide();
-    await pyodide.runPythonAsync(code);
-    return true; // Python code is valid
-  } catch (error) {
-    console.error('Python 3 Syntax Error:', error);
-    return false; // Syntax error detected
+    // Zabezpieczamy kod – np. zamieniając backslashe lub inne znaki
+    const safeCode = code.replace(/\\/g, "\\\\").replace(/`/g, "\\`");
+    const validationScript = `
+def validate():
+    code = """${safeCode}"""
+    try:
+        compile(code, '<string>', 'exec')
+        return "OK"
+    except Exception as e:
+        return f"Błąd: {e}"
+result = validate()
+result
+    `;
+    const result = pyodide.runPython(validationScript);
+    if (result === "OK") {
+      return true;
+    }
+    return String(result);
+  } catch (error: any) {
+    return "Błąd walidacji: " + String(error);
   }
 };
 
 
-import React, { useEffect, useState } from "react";
 
+
+
+import React, { useEffect, useState } from "react";
+import { useForm, Controller, FieldError } from "react-hook-form";
+import { validatePythonCode, PyodideInterface } from "../utils/pythonValidator";
+
+// Deklaracja globalna dla TS
 declare global {
   interface Window {
     loadPyodide?: (config: { indexURL: string }) => Promise<PyodideInterface>;
   }
 }
 
-interface PyodideInterface {
-  runPython: (code: string) => any;
-  // inne metody, np. loadPackage, FS, itp.
+interface FormValues {
+  code: string;
 }
 
-function App() {
+const PythonValidatorForm: React.FC = () => {
+  const { control, handleSubmit } = useForm<FormValues>({
+    mode: "onChange",
+  });
   const [pyodide, setPyodide] = useState<PyodideInterface | null>(null);
-  const [result, setResult] = useState("");
+  const [loadingPyodide, setLoadingPyodide] = useState<boolean>(true);
 
   useEffect(() => {
-    // Wczytujemy skrypt Pyodide dopiero w momencie działania aplikacji
-    const script = document.createElement("script");
-    // Najnowszą wersję sprawdzisz w repo Pyodide. Poniżej przykładowa 0.23.3
-    script.src = "https://cdn.jsdelivr.net/pyodide/v0.23.3/full/pyodide.js";
-    script.onload = async () => {
-      if (!window.loadPyodide) {
-        setResult("Nie można znaleźć window.loadPyodide");
-        return;
-      }
-      try {
-        const pyodideObj = await window.loadPyodide({
-          indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.3/full/",
-        });
-        setPyodide(pyodideObj);
-      } catch (err) {
-        setResult("Błąd ładowania Pyodide: " + String(err));
-      }
+    const loadPyodideScript = () => {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/pyodide/v0.23.3/full/pyodide.js";
+      script.onload = async () => {
+        if (!window.loadPyodide) {
+          console.error("Brak window.loadPyodide");
+          setLoadingPyodide(false);
+          return;
+        }
+        try {
+          const pyodideInstance = await window.loadPyodide({
+            indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.3/full/",
+          });
+          setPyodide(pyodideInstance);
+          setLoadingPyodide(false);
+        } catch (error) {
+          console.error("Błąd ładowania Pyodide:", error);
+          setLoadingPyodide(false);
+        }
+      };
+      script.onerror = () => {
+        console.error("Błąd ładowania skryptu Pyodide.");
+        setLoadingPyodide(false);
+      };
+      document.body.appendChild(script);
     };
-    document.body.appendChild(script);
+
+    loadPyodideScript();
   }, []);
 
-  const runCode = () => {
-    if (!pyodide) {
-      setResult("Pyodide jeszcze się ładuje...");
-      return;
-    }
-    try {
-      const output = pyodide.runPython(`
-def greet(name):
-    return f"Hello, {name}!"
-
-greet("React with TS")
-`);
-      setResult(String(output));
-    } catch (error) {
-      setResult("Błąd wykonania kodu: " + String(error));
-    }
+  const onSubmit = (data: FormValues) => {
+    alert("Kod przesłany:\n" + data.code);
   };
 
   return (
-    <div style={{ padding: "1rem" }}>
-      <h1>Pyodide w React + TypeScript + CRA</h1>
-      {!pyodide ? (
-        <p>Ładowanie Pyodide...</p>
-      ) : (
-        <button onClick={runCode}>Uruchom kod Pythona</button>
-      )}
-      <div style={{ marginTop: "1rem" }}>Wynik: {result}</div>
+    <div style={{ padding: "1rem", fontFamily: "sans-serif" }}>
+      <h2>Formularz z walidacją kodu Python</h2>
+      {loadingPyodide && <p>Ładowanie Pyodide...</p>}
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <Controller
+          name="code"
+          control={control}
+          defaultValue=""
+          rules={{
+            required: "Kod jest wymagany",
+            // Używamy funkcji walidatora z osobnego pliku.
+            validate: async (value) => await validatePythonCode(value, pyodide),
+          }}
+          render={({ field, fieldState }) => (
+            <div>
+              <textarea
+                {...field}
+                rows={10}
+                cols={50}
+                placeholder="Wpisz kod Python..."
+                style={{ fontFamily: "monospace", fontSize: "14px" }}
+              />
+              {fieldState.error && (
+                <p style={{ color: "red" }}>
+                  {(fieldState.error as FieldError).message}
+                </p>
+              )}
+            </div>
+          )}
+        />
+        <button type="submit" disabled={loadingPyodide}>
+          Wyślij kod
+        </button>
+      </form>
     </div>
   );
-}
+};
 
-export default App;
+export default PythonValidatorForm;
