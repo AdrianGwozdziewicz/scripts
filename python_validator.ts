@@ -72,20 +72,20 @@ export const validatePythonCode = async (pyodide: any, userCode: string): Promis
     return "Pyodide nie jest jeszcze załadowany.";
   }
 
-  const wrappedCode = `
-def on_event(input, data):
-    ${userCode.replace(/\n/g, "\n    ")}  # Dodajemy wcięcie, żeby pasowało do funkcji
+  // Tworzymy kod funkcji Python z wcięciem
+  const wrappedCode = `def on_event(input, data):\n    ${userCode.replace(/\n/g, "\n    ")}`;
 
-# Sprawdzamy, czy kod ma poprawną składnię
+  try {
+    // Używamy 'exec' i przekazujemy kod jako argument, aby uniknąć interpolacji
+    pyodide.globals.set("wrappedCode", wrappedCode);
+    const result = await pyodide.runPythonAsync(`
 try:
-    compile('''${wrappedCode}''', '<string>', 'exec')
+    compile(wrappedCode, '<string>', 'exec')
     result = "OK"
 except SyntaxError as e:
     result = str(e)
-`;
+`);
 
-  try {
-    const result = await pyodide.runPythonAsync(wrappedCode);
     return result === "OK" ? true : `Błąd składni: ${result}`;
   } catch (error) {
     return `Błąd walidacji: ${String(error)}`;
