@@ -138,3 +138,18 @@ except Exception as e:
     return `Błąd walidacji: ${String(error)}`;
   }
 };
+
+
+class JsonNode:
+    """Dynamiczny obiekt JSON, który pozwala na dostęp do dowolnych pól."""
+    def __init__(self, data=None):
+        self._data = data if data else {}
+
+    def __getattr__(self, name):
+        return JsonNode()
+
+    def __getitem__(self, key):
+        return JsonNode()
+
+    def __repr__(self):
+        return "JsonNode()"
