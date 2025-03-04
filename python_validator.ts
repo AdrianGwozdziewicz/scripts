@@ -91,3 +91,45 @@ except SyntaxError as e:
     return `Błąd walidacji: ${String(error)}`;
   }
 };
+
+
+
+export const validatePythonCode = async (pyodide: any, userCode: string): Promise<true | string> => {
+  if (!pyodide) {
+    return "Pyodide nie jest jeszcze załadowany.";
+  }
+
+  // Formatowanie kodu użytkownika z poprawnym wcięciem
+  const wrappedCode = `def on_event(input, data):\n    ${userCode.replace(/\n/g, "\n    ")}`;
+
+  try {
+    // Przekazujemy kod do Pyodide
+    pyodide.globals.set("wrappedCode", wrappedCode);
+
+    // Uruchamiamy walidację składni i literówek
+    await pyodide.runPythonAsync(`
+try:
+    # 1. Sprawdzamy poprawność składni
+    compile(wrappedCode, '<string>', 'exec')
+
+    # 2. Sprawdzamy literówki (błędy NameError)
+    test_globals = {}
+    exec(wrappedCode, test_globals)
+
+    validation_result = "OK"
+except SyntaxError as e:
+    validation_result = "Błąd składni: " + str(e)
+except NameError as e:
+    validation_result = "Błąd nazwy zmiennej/funkcji (możliwa literówka): " + str(e)
+except Exception as e:
+    validation_result = "Błąd: " + str(e)
+`);
+
+    // Pobieramy wynik walidacji
+    const result = pyodide.globals.get("validation_result");
+
+    return result === "OK" ? true : result;
+  } catch (error) {
+    return `Błąd walidacji: ${String(error)}`;
+  }
+};
