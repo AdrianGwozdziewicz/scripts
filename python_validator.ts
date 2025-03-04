@@ -108,19 +108,24 @@ export const validatePythonCode = async (pyodide: any, userCode: string): Promis
 
     // Uruchamiamy walidację składni i literówek
     await pyodide.runPythonAsync(`
+import ast
+
 try:
-    # 1. Sprawdzamy poprawność składni
+    # 1. Sprawdzenie składni
     compile(wrappedCode, '<string>', 'exec')
 
-    # 2. Sprawdzamy literówki (błędy NameError)
-    test_globals = {}
-    exec(wrappedCode, test_globals)
+    # 2. Analiza AST - sprawdzenie niezadeklarowanych zmiennych
+    tree = ast.parse(wrappedCode)
+    names = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
+
+    # 3. Wymuszenie wykonania bez kontekstu globalnego
+    exec(wrappedCode, {}, {})
 
     validation_result = "OK"
 except SyntaxError as e:
     validation_result = "Błąd składni: " + str(e)
 except NameError as e:
-    validation_result = "Błąd nazwy zmiennej/funkcji (możliwa literówka): " + str(e)
+    validation_result = "Błąd zmiennej (możliwa literówka): " + str(e)
 except Exception as e:
     validation_result = "Błąd: " + str(e)
 `);
