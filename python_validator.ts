@@ -1,155 +1,55 @@
-import "brython"; // Importuje Brython z node_modules
-
-export const validatePythonCode = (code: string): true | string => {
-  if (typeof window.brython_run !== "function") {
-    return "Brython nie został poprawnie załadowany.";
-  }
-
-  try {
-    const validationScript = `
-try:
-    exec("""${code}""")
-    result = "OK"
-except Exception as e:
-    result = str(e)
-`;
-    const result = window.brython_run(validationScript);
-    return result === "OK" ? true : result;
-  } catch (error) {
-    return "Błąd walidacji: " + String(error);
-  }
-};
-
-
-
-
-module.exports = function override(config, env) {
-  config.module.rules.push({
-    test: /brython\.js$/,
-    use: "raw-loader",
-  });
-
-  return config;
-};
-
-
-
- // Funkcja submit, która po pomyślnym zwalidowaniu kodu uruchamia go
-  const onSubmit = (data: { code: string }) => {
-    console.log('Wysłany kod:', data.code);
-
-    // Uruchamiamy kod Pythona po zatwierdzeniu formularza
-    const script = document.createElement('script');
-    script.type = 'text/python';
-    script.text = data.code;
-    document.body.appendChild(script);
-  };
-
-
-
-import { FieldValues } from "react-hook-form";
-
-// Funkcja walidująca kod Pythona
-export const validatePythonCode = (value: string) => {
-  try {
-    // Tworzymy element <script> do osadzenia kodu Pythona
-    const script = document.createElement('script');
-    script.type = 'text/python';
-    script.text = value;
-    document.body.appendChild(script);
-
-    // Jeżeli kod przejdzie bez błędów, zwróci prawdę
-    return true;
-  } catch (error) {
-    // Zwracamy komunikat o błędzie, jeśli coś poszło nie tak
-    return "Błąd składni Pythona!";
-  }
-};
-
-
-export const validatePythonCode = async (pyodide: any, userCode: string): Promise<true | string> => {
+export const runPythonFunction = async (
+  pyodide: any,
+  userCode: string,
+  input: any,
+  data: any
+): Promise<any> => {
   if (!pyodide) {
-    return "Pyodide nie jest jeszcze załadowany.";
+    return "Pyodide nie jest załadowany.";
   }
 
-  // Tworzymy kod funkcji Python z wcięciem
+  // Offset: kod użytkownika zaczyna się od 2. linii w wrappedCode
+  const userCodeOffset = 1; 
+
+  // Opakowanie kodu użytkownika
   const wrappedCode = `def on_event(input, data):\n    ${userCode.replace(/\n/g, "\n    ")}`;
 
   try {
-    // Używamy 'exec' i przekazujemy kod jako argument, aby uniknąć interpolacji
     pyodide.globals.set("wrappedCode", wrappedCode);
-    const result = await pyodide.runPythonAsync(`
-try:
-    compile(wrappedCode, '<string>', 'exec')
-    result = "OK"
-except SyntaxError as e:
-    result = str(e)
-`);
+    pyodide.globals.set("input_data", input);
+    pyodide.globals.set("event_data", data);
+    pyodide.globals.set("userCodeOffset", userCodeOffset);
 
-    return result === "OK" ? true : `Błąd składni: ${result}`;
-  } catch (error) {
-    return `Błąd walidacji: ${String(error)}`;
-  }
-};
-
-
-
-export const validatePythonCode = async (pyodide: any, userCode: string): Promise<true | string> => {
-  if (!pyodide) {
-    return "Pyodide nie jest jeszcze załadowany.";
-  }
-
-  // Formatowanie kodu użytkownika z poprawnym wcięciem
-  const wrappedCode = `def on_event(input, data):\n    ${userCode.replace(/\n/g, "\n    ")}`;
-
-  try {
-    // Przekazujemy kod do Pyodide
-    pyodide.globals.set("wrappedCode", wrappedCode);
-
-    // Uruchamiamy walidację składni i literówek
     await pyodide.runPythonAsync(`
-import ast
+import traceback
 
 try:
-    # 1. Sprawdzenie składni
-    compile(wrappedCode, '<string>', 'exec')
+    # Wykonanie kodu
+    local_scope = {}
+    exec(wrappedCode, {}, local_scope)
 
-    # 2. Analiza AST - sprawdzenie niezadeklarowanych zmiennych
-    tree = ast.parse(wrappedCode)
-    names = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
+    # Pobranie funkcji on_event
+    on_event_func = local_scope.get("on_event")
+    if on_event_func is None:
+        raise NameError("Funkcja on_event nie została zdefiniowana")
 
-    # 3. Wymuszenie wykonania bez kontekstu globalnego
-    exec(wrappedCode, {}, {})
-
-    validation_result = "OK"
-except SyntaxError as e:
-    validation_result = "Błąd składni: " + str(e)
-except NameError as e:
-    validation_result = "Błąd zmiennej (możliwa literówka): " + str(e)
+    # Uruchomienie kodu użytkownika
+    execution_result = on_event_func(input_data, event_data)
 except Exception as e:
-    validation_result = "Błąd: " + str(e)
+    tb = traceback.format_exc().splitlines()
+    
+    # Szukamy linii, w której wystąpił błąd
+    error_line = next((line for line in tb if "on_event" in line), None)
+    if error_line:
+        line_number = int(error_line.split("line ")[1].split(",")[0])
+        corrected_lineno = line_number - userCodeOffset
+        execution_result = f"Błąd w linii {corrected_lineno}: {str(e)}"
+    else:
+        execution_result = f"Błąd: {str(e)}"
 `);
 
-    // Pobieramy wynik walidacji
-    const result = pyodide.globals.get("validation_result");
-
-    return result === "OK" ? true : result;
+    return pyodide.globals.get("execution_result");
   } catch (error) {
-    return `Błąd walidacji: ${String(error)}`;
+    return `Błąd wykonania: ${String(error)}`;
   }
 };
-
-
-class JsonNode:
-    """Dynamiczny obiekt JSON, który pozwala na dostęp do dowolnych pól."""
-    def __init__(self, data=None):
-        self._data = data if data else {}
-
-    def __getattr__(self, name):
-        return JsonNode()
-
-    def __getitem__(self, key):
-        return JsonNode()
-
-    def __repr__(self):
-        return "JsonNode()"
