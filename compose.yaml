@@ -1,0 +1,37 @@
+version: '3.8'
+
+networks:
+  hz-network:  # Definicja wspólnej sieci dla klastrów i aplikacji
+
+services:
+  hazelcast-node-1:
+    image: hazelcast/hazelcast:latest
+    container_name: hazelcast-node-1
+    networks:
+      - hz-network
+    environment:
+      - HZ_NETWORK_PUBLICADDRESS=hazelcast-node-1:5701
+      - HZ_CLUSTER_MEMBERS=hazelcast-node-1:5701,hazelcast-node-2:5701
+    ports:
+      - "5701:5701"  # Udostępnienie portu dla aplikacji poza Dockerem
+
+  hazelcast-node-2:
+    image: hazelcast/hazelcast:latest
+    container_name: hazelcast-node-2
+    networks:
+      - hz-network
+    environment:
+      - HZ_NETWORK_PUBLICADDRESS=hazelcast-node-2:5701
+      - HZ_CLUSTER_MEMBERS=hazelcast-node-1:5701,hazelcast-node-2:5701
+    ports:
+      - "5702:5701"  # Alternatywny port dla drugiego węzła
+
+  man-center:
+    image: hazelcast/management-center:latest
+    container_name: man-center
+    networks:
+      - hz-network
+    ports:
+      - "8080:8080"  # Dostęp do panelu zarządzania przez http://localhost:8080
+    environment:
+      - MC_DEFAULT_CLUSTER_MEMBERS=hazelcast-node-1:5701,hazelcast-node-2:5701
