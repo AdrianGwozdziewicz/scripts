@@ -37,7 +37,8 @@ try:
     execution_result = on_event_func(input_data, event_data)
 except Exception as e:
     tb = traceback.format_exc().splitlines()
-    
+    updated_msg = re.sub(r'line (\d+)', lambda m: f'line {int(m.group(1)) - base_line}', str(e))
+
     # Szukamy linii, w której wystąpił błąd
     error_line = next((line for line in tb if "on_event" in line), None)
     if error_line:
