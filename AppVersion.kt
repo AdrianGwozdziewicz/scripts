@@ -36,4 +36,13 @@ class AppVersion : InfoContributor, ConsulRegistrationCustomizer {
         }
         return null
     }
+
+private fun readVersionFromManifest2(): String? {
+    val codeSource = javaClass.protectionDomain.codeSource ?: return null
+    val url = codeSource.location
+    if (url.protocol != "file") return null
+
+    val jarFile = java.util.jar.JarFile(url.path)
+    return jarFile.manifest.mainAttributes.getValue("Implementation-Build")
+}
 }
