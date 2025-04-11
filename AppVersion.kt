@@ -66,5 +66,11 @@ class AppVersion : InfoContributor, ConsulRegistrationCustomizer {
         }
     }
 }
-
+private fun loadManifestAttribute(attribute: String): String? {
+        val url = javaClass.classLoader.getResource("META-INF/MANIFEST.MF") ?: return null
+        return url.openStream().use { stream ->
+            val manifest = Manifest(stream)
+            manifest.mainAttributes.getValue(attribute)
+        }
+    }
 }
