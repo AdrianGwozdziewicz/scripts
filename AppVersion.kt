@@ -74,3 +74,21 @@ private fun loadManifestAttribute(attribute: String): String? {
         }
     }
 }
+
+
+ private String loadManifestAttribute(String attributeName) {
+        try {
+            ClassLoader classLoader = getClass().getClassLoader();
+            URL resource = classLoader.getResource("META-INF/MANIFEST.MF");
+            if (resource == null) {
+                return null;
+            }
+            try (InputStream inputStream = resource.openStream()) {
+                Manifest manifest = new Manifest(inputStream);
+                return manifest.getMainAttributes().getValue(attributeName);
+            }
+        } catch (Exception e) {
+            // optionally log the error here
+            return null;
+        }
+    }
