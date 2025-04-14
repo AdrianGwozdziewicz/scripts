@@ -72,3 +72,28 @@ else
     echo "Błąd podczas tworzenia merge requesta:"
     echo "$response"
 fi
+
+
+include:
+  project: 'dev/build'
+  file: '/dev/build/deploy.yaml'
+
+stages:
+  - build
+  - nexus
+  - deploy-dev
+  - deploy-alfa
+  - deploy-beta
+
+deploy-dev:
+  stage: deploy-dev
+  extends: .deploy-template
+  before_script:
+    - |
+      if [[ -n "$CI_COMMIT_TAG" ]]; then
+        export VERSION="$CI_COMMIT_TAG"
+      else
+        export VERSION="$CI_COMMIT_REF_NAME"
+      fi
+      echo "VERSION=$VERSION"
+    - echo "Custom before_script in job"
