@@ -1,3 +1,7 @@
+
+const SIMPLE_REGEX = /^@\.([a-zA-Z0-9_.]+)(?:\s*(==|!=|<|>|<=|>=)\s*(?:"([^"\\]*?(?:\\.[^"\\]*)*)"|'([^'\\]*?(?:\\.[^'\\]*)*)'|true|false|null|\d+(?:\.\d+)?))?$/
+
+
 const isValidJsonPath = (jsonPath) => {
     // Enhanced regex for JSONPath structure including array indices and filters
     const jsonPathRegex = /^\$([.\[][^.\[]+)*$/; // Basic JSONPath syntax
