@@ -3,6 +3,13 @@ const SIMPLE_REGEX = /^@\.([a-zA-Z0-9_.]+)(?:\s*(==|!=|<|>|<=|>=)\s*(?:"([^"\\]*
 /^@\.([a-zA-Z0-9_.]+)\s*(==|!=|<|>|<=|>=|in|nin)?\s*(null|true|false|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\d+(\.\d+)?|\[(?:\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|\d+(\.\d+)?|true|false|null)\s*,?)*\]))?$/;
   const regex = /^@\.([a-zA-Z0-9_.]+)\s*(==|!=|<|>|<=|>=|=~|in|nin|subsetof|anyof|noneof|size|empty)\s*(\('.*'\)|".*")$/;
 
+const simpleFilterPattern = /^
+  (?:size|empty)?\(?\s*
+  (?:@(?:\.[\w]+)+|true|false|null|-?\d+(?:\.\d+)?|'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")\s*\)?
+  \s*(==|!=|<|<=|>|>=|=~|in|nin|subsetof|anyof|noneof)\s*
+  (\/.*?\/[gimsuy]*|true|false|null|-?\d+(?:\.\d+)?|'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|\[.*\])
+$/;
+
 
 const isValidJsonPath = (jsonPath) => {
     // Enhanced regex for JSONPath structure including array indices and filters
