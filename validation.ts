@@ -10,6 +10,7 @@ const simpleFilterPattern = /^
   (\/.*?\/[gimsuy]*|true|false|null|-?\d+(?:\.\d+)?|'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|\[.*\])
 $/;
 
+const simpleFilterPattern = /^(?:(?:size|empty)?\(?\s*@(?:\.[\w]+)+\s*\)?|@(?:\.[\w]+)+|\d+(?:\.\d+)?|true|false|null|'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")(?:\s*(==|!=|<|<=|>|>=|=~|in|nin|subsetof|anyof|noneof)\s*(\/.*?\/[gimsuy]*|true|false|null|-?\d+(?:\.\d+)?|'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|\[.*\]))?$/;
 
 const isValidJsonPath = (jsonPath) => {
     // Enhanced regex for JSONPath structure including array indices and filters
