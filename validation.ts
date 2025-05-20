@@ -14,6 +14,41 @@ const simpleFilterPattern = /^(?:(?:size|empty)?\(?\s*@(?:\.[\w]+)+\s*\)?|@(?:\.
 
    const allowedFunctionPattern = /\.(sum|min|max|avg|stddev|length|keys|first|last|append|concat|index)(\([^()]*\))?$/;
 
+
+/**
+ *  Operand:
+ *    1) funkcja z argumentem ścieżkowym, np. length(@.arr)
+ *    2) ścieżka z metodą bez‑argumentową, np. @.arr.length()
+ *    3) zwykła ścieżka @.a.b
+ *    4) literały: liczby, true/false/null, string‑quoted
+ */
+const FUNC_NAMES        = '(?:size|empty|length|min|max|avg|stddev|sum|keys|first|last)';
+const PATH              = '@(?:\\.[\\w]+)+';                    // @.foo.bar
+const FUNC_PREFIX_CALL  = `${FUNC_NAMES}\\s*\\(\\s*${PATH}\\s*\\)`;               // length(@.arr)
+const FUNC_SUFFIX_CALL  = `${PATH}\\.${FUNC_NAMES}\\s*\\(\\s*\\)`;                // @.arr.length()
+const NUMBER            = '-?\\d+(?:\\.\\d+)?';
+const STRING_SINGLE     = `'(?:[^'\\\\]|\\\\.)*'`;
+const STRING_DOUBLE     = `"(?:[^"\\\\]|\\\\.)*"`;
+const LITERAL           = `${NUMBER}|true|false|null|${STRING_SINGLE}|${STRING_DOUBLE}`;
+
+const OPERAND           = `(?:${FUNC_PREFIX_CALL}|${FUNC_SUFFIX_CALL}|${PATH}|${LITERAL})`;
+
+/**
+ *  Operator i prawy operand
+ */
+const OPERATOR          = '==|!=|<|<=|>|>=|=~|in|nin|subsetof|anyof|noneof';
+const REGEX_LITERAL     = '\\/.*?\\/[gimsuy]*';
+const ARRAY_LITERAL     = '\\[.*?\\]';      // proste dopasowanie; nie rekurencyjne
+const RIGHT_OPERAND     = `(?:${OPERAND}|${REGEX_LITERAL}|${ARRAY_LITERAL})`;
+
+/**
+ *  Końcowy wzorzec
+ */
+export const simpleFilterPattern = new RegExp(
+  `^${OPERAND}(?:\\s*(?:${OPERATOR})\\s*${RIGHT_OPERAND})?$`
+);
+
+
 const isValidJsonPath = (jsonPath) => {
     // Enhanced regex for JSONPath structure including array indices and filters
     const jsonPathRegex = /^\$([.\[][^.\[]+)*$/; // Basic JSONPath syntax
