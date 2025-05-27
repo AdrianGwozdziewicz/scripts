@@ -94,6 +94,26 @@ console.log(isValidJsonPath("$.input.array[abc].[?(@.filter)]")); // false
 console.log(isValidJsonPath("$.input.array[0].[?(@.filter == 'yes')]")); // true
 
 
+export function hasBalancedBrackets(path: string): boolean {
+  const stack: string[] = [];
+
+  for (const char of path) {
+    switch (char) {
+      case '(':
+      case '[':
+        stack.push(char);
+        break;
+      case ')':
+        if (stack.pop() !== '(') return false;
+        break;
+      case ']':
+        if (stack.pop() !== '[') return false;
+        break;
+    }
+  }
+
+  return stack.length === 0;
+}
 
 
 
