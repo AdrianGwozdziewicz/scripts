@@ -14,6 +14,20 @@ const simpleFilterPattern = /^(?:(?:size|empty)?\(?\s*@(?:\.[\w]+)+\s*\)?|@(?:\.
 
    const allowedFunctionPattern = /\.(sum|min|max|avg|stddev|length|keys|first|last|append|concat|index)(\([^()]*\))?$/;
 
+// Dozwolone funkcje
+const FUNC_NAMES = '(?:min|max|avg|stddev|length|sum|keys|concat|append|first|last|index)';
+
+// Ścieżka JSONPath po znaku $
+const JSON_PATH = '(?:\\.[a-zA-Z_][\\w]*)+';
+
+// Argument funkcji (dowolny, bez nawiasów w środku)
+const FUNC_ARG = '[^()]*';
+
+// Finalny wzorzec
+export const functionCallPattern = new RegExp(
+  `^\\$(${JSON_PATH})\\.${FUNC_NAMES}\\s*\\(\\s*(${FUNC_ARG})\\s*\\)$`
+);
+
 
 /**
  *  Operand:
